@@ -268,7 +268,7 @@ describe('POST /discover network list', () => {
           id: first.id,
           enabled: true,
           data: JSON.stringify([
-            { id: 1, name: 'Netflix', logoPath: '/logo.png' },
+            { id: 1, name: 'Updated Netflix', logoPath: '/logo.png' },
           ]),
         },
         {
@@ -309,6 +309,15 @@ describe('POST /discover network list', () => {
 
     assert.equal(response.status, 200);
     assert.equal(response.body.length, 2);
-    // Both were saved with their respective data
+
+    const repository = getRepository(DiscoverSlider);
+    assert.equal(
+      (await repository.findOneByOrFail({ id: slider1.id })).data,
+      JSON.stringify(networkList(2))
+    );
+    assert.equal(
+      (await repository.findOneByOrFail({ id: slider2.id })).data,
+      JSON.stringify(networkList(3))
+    );
   });
 });
