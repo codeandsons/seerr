@@ -237,4 +237,102 @@ describe('Discover Customization', () => {
       cy.contains('has been added to the list.').should('not.exist');
     });
   });
+
+  describe('Studios slider editor', () => {
+    const addStudio = (id: string) => {
+      cy.get('[data-testid=discover-studio-editor]')
+        .find('input')
+        .type(`${id}{enter}`);
+    };
+
+    beforeEach(() => {
+      cy.visit('/');
+      cy.get('[data-testid=discover-start-editing]').click();
+      cy.get('[data-testid=discover-studio-editor]').should('be.visible');
+    });
+
+    it('shows the default studios', () => {
+      cy.get('[data-testid=discover-studio-editor]')
+        .find('li')
+        .should('contain', 'Disney')
+        .and('contain', 'Pixar')
+        .and('contain', 'A24');
+    });
+
+    it('shows a success toast when a studio is added', () => {
+      cy.intercept('GET', '/api/v1/studio/1632', {
+        body: { id: 1632, name: 'Lionsgate', logoPath: '/lionsgate.png' },
+      }).as('getStudio');
+
+      addStudio('1632');
+      cy.wait('@getStudio');
+
+      cy.contains('Lionsgate has been added to the list.').should('be.visible');
+      cy.get('[data-testid=discover-studio-editor]')
+        .find('li')
+        .last()
+        .should('contain', 'Lionsgate');
+      cy.get('[data-testid=discover-studio-editor]')
+        .find('input')
+        .should('have.value', '');
+    });
+
+    it('does not add a studio that is already in the list', () => {
+      cy.intercept('GET', '/api/v1/studio/1632', {
+        body: { id: 1632, name: 'Lionsgate', logoPath: '/lionsgate.png' },
+      }).as('getStudio');
+
+      addStudio('1632');
+      cy.wait('@getStudio');
+      cy.contains('Lionsgate has been added to the list.').should('be.visible');
+
+      addStudio('1632');
+
+      cy.contains('Lionsgate is already in the list.').should('be.visible');
+      cy.get('[data-testid=discover-studio-editor]')
+        .find('li')
+        .filter(':contains("Lionsgate")')
+        .should('have.length', 1);
+    });
+
+    it('does not add a studio without a logo', () => {
+      cy.intercept('GET', '/api/v1/studio/9999', {
+        body: { id: 9999, name: 'No Logo Pictures' },
+      }).as('getStudio');
+
+      addStudio('9999');
+      cy.wait('@getStudio');
+
+      cy.contains(
+        'No Logo Pictures has no logo, so it cannot be added.'
+      ).should('be.visible');
+      cy.contains('has been added to the list.').should('not.exist');
+    });
+
+    it('shows an error when the studio cannot be found', () => {
+      // The API responds with a 500 when TMDB cannot find the studio
+      cy.intercept('GET', '/api/v1/studio/8888', { statusCode: 500 }).as(
+        'getStudio'
+      );
+
+      addStudio('8888');
+      cy.wait('@getStudio');
+
+      cy.contains('Could not find that studio.').should('be.visible');
+      cy.contains('has been added to the list.').should('not.exist');
+    });
+
+    it('does not change the networks list', () => {
+      cy.intercept('GET', '/api/v1/studio/1632', {
+        body: { id: 1632, name: 'Lionsgate', logoPath: '/lionsgate.png' },
+      }).as('getStudio');
+
+      addStudio('1632');
+      cy.wait('@getStudio');
+
+      cy.get('[data-testid=discover-network-editor]')
+        .find('li')
+        .should('not.contain', 'Lionsgate');
+    });
+  });
 });

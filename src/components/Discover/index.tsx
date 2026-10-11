@@ -30,6 +30,7 @@ import {
 import {
   DiscoverSliderType,
   MAX_DISCOVER_NETWORKS,
+  MAX_DISCOVER_STUDIOS,
 } from '@server/constants/discover';
 import { ApiErrorCode } from '@server/constants/error';
 import type DiscoverSlider from '@server/entity/DiscoverSlider';
@@ -53,6 +54,8 @@ const messages = defineMessages('components.Discover', {
     'Something went wrong resetting the discover customization settings.',
   toomanynetworks: 'A network list can contain at most {maxNetworks} networks.',
   invalidnetworklist: 'The list of networks is not valid.',
+  toomanystudios: 'A studio list can contain at most {maxStudios} studios.',
+  invalidstudiolist: 'The list of studios is not valid.',
   customizediscover: 'Customize Discover',
   stopediting: 'Stop Editing',
   createnewslider: 'Create New Slider',
@@ -60,7 +63,7 @@ const messages = defineMessages('components.Discover', {
 
 // After a slider is created, edited or deleted on the server, merge the fresh
 // list into the local one so unsaved changes (order, enabled state and the
-// networks list) are not thrown away.
+// networks and studios lists) are not thrown away.
 const mergeRefreshedSliders = (
   current: Partial<DiscoverSlider>[],
   refreshed: DiscoverSlider[]
@@ -118,6 +121,19 @@ const Discover = () => {
 
   const hasChanged = () => !Object.is(discoverData, sliders);
 
+  // Used by the Networks and Studios sliders to change their list locally
+  const updateSliderData = (
+    sliderId: number | undefined,
+    data: string | null
+  ) =>
+    setSliders((currentSliders) =>
+      currentSliders.map((currentSlider) =>
+        currentSlider.id === sliderId
+          ? { ...currentSlider, data }
+          : currentSlider
+      )
+    );
+
   const refreshSliders = async () => {
     const refreshed = await mutate();
 
@@ -139,7 +155,8 @@ const Discover = () => {
       setIsEditing(false);
       mutate();
     } catch (error) {
-      // A 400 carries an error code when the networks list was rejected
+      // A 400 carries an error code when the networks or studios list was
+      // rejected
       const errorCode =
         axios.isAxiosError(error) && error.response?.status === 400
           ? error.response.data?.message
@@ -153,6 +170,12 @@ const Discover = () => {
         });
       } else if (errorCode === ApiErrorCode.InvalidNetworkList) {
         toastMessage = intl.formatMessage(messages.invalidnetworklist);
+      } else if (errorCode === ApiErrorCode.TooManyStudios) {
+        toastMessage = intl.formatMessage(messages.toomanystudios, {
+          maxStudios: MAX_DISCOVER_STUDIOS,
+        });
+      } else if (errorCode === ApiErrorCode.InvalidStudioList) {
+        toastMessage = intl.formatMessage(messages.invalidstudiolist);
       }
 
       addToast(toastMessage, {
@@ -318,7 +341,13 @@ const Discover = () => {
             );
             break;
           case DiscoverSliderType.STUDIOS:
-            sliderComponent = <StudioSlider />;
+            sliderComponent = (
+              <StudioSlider
+                data={slider.data}
+                isEditing={isEditing}
+                onChange={(data) => updateSliderData(slider.id, data)}
+              />
+            );
             break;
           case DiscoverSliderType.POPULAR_TV:
             sliderComponent = (
@@ -349,15 +378,7 @@ const Discover = () => {
               <NetworkSlider
                 data={slider.data}
                 isEditing={isEditing}
-                onChange={(data) =>
-                  setSliders((currentSliders) =>
-                    currentSliders.map((currentSlider) =>
-                      currentSlider.id === slider.id
-                        ? { ...currentSlider, data }
-                        : currentSlider
-                    )
-                  )
-                }
+                onChange={(data) => updateSliderData(slider.id, data)}
               />
             );
             break;
