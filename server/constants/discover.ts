@@ -26,32 +26,34 @@ export enum DiscoverSliderType {
 }
 
 export const MAX_DISCOVER_NETWORKS = 50;
-export const MAX_DISCOVER_NETWORK_NAME_LENGTH = 200;
+export const MAX_DISCOVER_BRAND_NAME_LENGTH = 200;
 
 // A single TMDB image path such as `/wwemzKWzjKYJFfCeiB57q3r4Bcm.png`. It must
 // start with a letter or digit, which rules out `/.` and `/..`.
-export const DISCOVER_NETWORK_LOGO_PATH = /^\/[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
+export const DISCOVER_BRAND_LOGO_PATH = /^\/[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
 
-// Shared by the server (when saving) and the client (when reading and adding
-// networks) so both sides accept exactly the same list.
-export const discoverNetworkSchema = z.object({
+// The Networks and Studios sliders both show a list of brands (TMDB networks
+// or production companies). This is shared by the server (when saving) and the
+// client (when reading and adding brands) so both sides accept exactly the
+// same list.
+export const discoverBrandSchema = z.object({
   id: z.number().int().positive(),
-  name: z.string().trim().min(1).max(MAX_DISCOVER_NETWORK_NAME_LENGTH),
-  logoPath: z.string().regex(DISCOVER_NETWORK_LOGO_PATH),
+  name: z.string().trim().min(1).max(MAX_DISCOVER_BRAND_NAME_LENGTH),
+  logoPath: z.string().regex(DISCOVER_BRAND_LOGO_PATH),
 });
 
-// Also drops networks with an id that is already in the list
-export const discoverNetworksSchema = z
-  .array(discoverNetworkSchema)
-  .transform((networks) => {
+// Also drops brands with an id that is already in the list
+export const discoverBrandsSchema = z
+  .array(discoverBrandSchema)
+  .transform((brands) => {
     const seen = new Set<number>();
 
-    return networks.filter((network) => {
-      if (seen.has(network.id)) {
+    return brands.filter((brand) => {
+      if (seen.has(brand.id)) {
         return false;
       }
 
-      seen.add(network.id);
+      seen.add(brand.id);
 
       return true;
     });
