@@ -5,25 +5,41 @@ import {
   InvalidDiscoverNetworksError,
   sanitizeDiscoverNetworks,
 } from '@server/lib/discoverNetworks';
+import {
+  InvalidDiscoverStudiosError,
+  sanitizeDiscoverStudios,
+} from '@server/lib/discoverStudios';
 import logger from '@server/logger';
 import { Router } from 'express';
 
-const applyNetworkList = (
+// The built-in sliders that show a list the admin can change. Their data is a
+// JSON list of brands that has to be validated before it is saved.
+const brandListSanitizers: Partial<
+  Record<DiscoverSliderType, (data: string | null) => string | null>
+> = {
+  [DiscoverSliderType.NETWORKS]: sanitizeDiscoverNetworks,
+  [DiscoverSliderType.STUDIOS]: sanitizeDiscoverStudios,
+};
+
+// Returns the error code when the list is rejected, otherwise null
+const applyBrandList = (
   existingSlider: DiscoverSlider,
   data: string | null | undefined
 ): string | null => {
-  if (
-    existingSlider.type !== DiscoverSliderType.NETWORKS ||
-    data === undefined
-  ) {
+  const sanitize = brandListSanitizers[existingSlider.type];
+
+  if (!sanitize || data === undefined) {
     return null;
   }
 
   try {
-    existingSlider.data = sanitizeDiscoverNetworks(data);
+    existingSlider.data = sanitize(data);
     return null;
   } catch (e) {
-    if (e instanceof InvalidDiscoverNetworksError) {
+    if (
+      e instanceof InvalidDiscoverNetworksError ||
+      e instanceof InvalidDiscoverStudiosError
+    ) {
       return e.message;
     }
 
@@ -57,16 +73,17 @@ discoverSettingRoutes.post('/', async (req, res) => {
       existingSlider.enabled = slider.enabled;
       existingSlider.order = x;
 
-      // Built-in sliders are fixed, except Networks, whose data is the shared list.
+      // Built-in sliders are fixed, except Networks and Studios, whose data is
+      // the shared list.
       if (!existingSlider.isBuiltIn) {
         existingSlider.title = slider.title;
         existingSlider.data = slider.data;
         existingSlider.type = slider.type;
       } else {
-        const networkListError = applyNetworkList(existingSlider, slider.data);
+        const brandListError = applyBrandList(existingSlider, slider.data);
 
-        if (networkListError) {
-          return res.status(400).json({ message: networkListError });
+        if (brandListError) {
+          return res.status(400).json({ message: brandListError });
         }
       }
 
@@ -129,16 +146,17 @@ discoverSettingRoutes.put('/:sliderId', async (req, res, next) => {
       },
     });
 
-    // Built-in sliders are fixed, except Networks, whose data is the shared list.
+    // Built-in sliders are fixed, except Networks and Studios, whose data is
+    // the shared list.
     if (!existingSlider.isBuiltIn) {
       existingSlider.title = slider.title;
       existingSlider.data = slider.data;
       existingSlider.type = slider.type;
     } else {
-      const networkListError = applyNetworkList(existingSlider, slider.data);
+      const brandListError = applyBrandList(existingSlider, slider.data);
 
-      if (networkListError) {
-        return res.status(400).json({ message: networkListError });
+      if (brandListError) {
+        return res.status(400).json({ message: brandListError });
       }
     }
 

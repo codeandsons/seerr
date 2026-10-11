@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   DiscoverSliderType,
   MAX_DISCOVER_NETWORKS,
+  MAX_DISCOVER_STUDIOS,
 } from '@server/constants/discover';
 import { ApiErrorCode } from '@server/constants/error';
 import { getRepository } from '@server/datasource';
@@ -318,6 +319,159 @@ describe('POST /discover network list', () => {
     assert.equal(
       (await repository.findOneByOrFail({ id: slider2.id })).data,
       JSON.stringify(networkList(3))
+    );
+  });
+});
+
+const studioList = (length: number) =>
+  Array.from({ length }, (_, index) => ({
+    id: index + 1,
+    name: `Studio ${index + 1}`,
+    logoPath: '/logo.png',
+  }));
+
+async function saveStudiosSlider() {
+  return getRepository(DiscoverSlider).save(
+    new DiscoverSlider({
+      type: DiscoverSliderType.STUDIOS,
+      isBuiltIn: true,
+      enabled: true,
+      order: 0,
+    })
+  );
+}
+
+describe('POST /discover studio list', () => {
+  it('returns the too many studios code for more than 50 studios', async () => {
+    const slider = await saveStudiosSlider();
+
+    const response = await request(app)
+      .post('/discover')
+      .send([
+        {
+          id: slider.id,
+          enabled: true,
+          data: JSON.stringify(studioList(MAX_DISCOVER_STUDIOS + 1)),
+        },
+      ]);
+
+    assert.equal(response.status, 400);
+    assert.equal(response.body.message, ApiErrorCode.TooManyStudios);
+
+    const stored = await getRepository(DiscoverSlider).findOneByOrFail({
+      id: slider.id,
+    });
+    assert.equal(stored.data ?? null, null);
+  });
+
+  it('returns the invalid studio list code for other invalid lists', async () => {
+    const slider = await saveStudiosSlider();
+
+    const post = await request(app)
+      .post('/discover')
+      .send([
+        {
+          id: slider.id,
+          enabled: true,
+          data: JSON.stringify([
+            { id: 1, name: 'Disney', logoPath: 'https://evil' },
+          ]),
+        },
+      ]);
+
+    assert.equal(post.status, 400);
+    assert.equal(post.body.message, ApiErrorCode.InvalidStudioList);
+
+    const put = await request(app)
+      .put(`/discover/${slider.id}`)
+      .send({ data: 'not-json' });
+
+    assert.equal(put.status, 400);
+    assert.equal(put.body.message, ApiErrorCode.InvalidStudioList);
+  });
+
+  it('saves a custom list and clears it again with null', async () => {
+    const slider = await saveStudiosSlider();
+    const repository = getRepository(DiscoverSlider);
+    const list = JSON.stringify(studioList(2));
+
+    const saved = await request(app)
+      .post('/discover')
+      .send([{ id: slider.id, enabled: true, data: list }]);
+
+    assert.equal(saved.status, 200);
+    assert.equal(
+      (await repository.findOneByOrFail({ id: slider.id })).data,
+      list
+    );
+
+    const cleared = await request(app)
+      .put(`/discover/${slider.id}`)
+      .send({ data: null });
+
+    assert.equal(cleared.status, 200);
+    assert.equal(
+      (await repository.findOneByOrFail({ id: slider.id })).data ?? null,
+      null
+    );
+  });
+
+  it('keeps the networks and studios lists separate', async () => {
+    const repository = getRepository(DiscoverSlider);
+    const networks = await saveNetworksSlider();
+    const studios = await saveStudiosSlider();
+
+    const response = await request(app)
+      .post('/discover')
+      .send([
+        {
+          id: networks.id,
+          enabled: true,
+          data: JSON.stringify(networkList(2)),
+        },
+        {
+          id: studios.id,
+          enabled: true,
+          data: JSON.stringify(studioList(3)),
+        },
+      ]);
+
+    assert.equal(response.status, 200);
+    assert.equal(
+      (await repository.findOneByOrFail({ id: networks.id })).data,
+      JSON.stringify(networkList(2))
+    );
+    assert.equal(
+      (await repository.findOneByOrFail({ id: studios.id })).data,
+      JSON.stringify(studioList(3))
+    );
+  });
+
+  it('does not save earlier sliders when a later studio list is invalid', async () => {
+    const repository = getRepository(DiscoverSlider);
+    const networks = await saveNetworksSlider();
+    const studios = await saveStudiosSlider();
+
+    const response = await request(app)
+      .post('/discover')
+      .send([
+        {
+          id: networks.id,
+          enabled: true,
+          data: JSON.stringify(networkList(2)),
+        },
+        {
+          id: studios.id,
+          enabled: true,
+          data: JSON.stringify(studioList(MAX_DISCOVER_STUDIOS + 1)),
+        },
+      ]);
+
+    assert.equal(response.status, 400);
+    assert.equal(response.body.message, ApiErrorCode.TooManyStudios);
+    assert.equal(
+      (await repository.findOneByOrFail({ id: networks.id })).data ?? null,
+      null
     );
   });
 });

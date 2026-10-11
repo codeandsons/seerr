@@ -26,6 +26,7 @@ export enum DiscoverSliderType {
 }
 
 export const MAX_DISCOVER_NETWORKS = 50;
+export const MAX_DISCOVER_STUDIOS = 50;
 export const MAX_DISCOVER_BRAND_NAME_LENGTH = 200;
 
 // A single TMDB image path such as `/wwemzKWzjKYJFfCeiB57q3r4Bcm.png`. It must
