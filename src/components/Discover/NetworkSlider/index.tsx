@@ -1,7 +1,7 @@
-import CompanyCard from '@app/components/CompanyCard';
+import BrandCard from '@app/components/BrandCard';
 import NetworkSliderEditor from '@app/components/Discover/NetworkSlider/Editor';
+import { brandLogoUrl } from '@app/components/Discover/brandLists';
 import {
-  networkLogoUrl,
   parseDiscoverNetworks,
   serializeDiscoverNetworks,
 } from '@app/components/Discover/networks';
@@ -48,10 +48,10 @@ const NetworkSlider = ({
         isLoading={false}
         isEmpty={networks.length === 0}
         items={networks.map((network) => (
-          <CompanyCard
+          <BrandCard
             key={`network-${network.id}`}
             name={network.name}
-            image={networkLogoUrl(network.logoPath)}
+            image={brandLogoUrl(network.logoPath)}
             url={`/discover/tv/network/${network.id}`}
           />
         ))}

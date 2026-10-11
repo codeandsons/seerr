@@ -1,4 +1,4 @@
-import CompanyCard from '@app/components/CompanyCard';
+import BrandCard from '@app/components/BrandCard';
 import Slider from '@app/components/Slider';
 import defineMessages from '@app/utils/defineMessages';
 import { useIntl } from 'react-intl';
@@ -97,7 +97,7 @@ const StudioSlider = () => {
         isLoading={false}
         isEmpty={false}
         items={studios.map((studio, index) => (
-          <CompanyCard
+          <BrandCard
             key={`studio-${index}`}
             name={studio.name}
             image={studio.image}

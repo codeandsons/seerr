@@ -1,5 +1,5 @@
 import {
-  discoverNetworksSchema,
+  discoverBrandsSchema,
   MAX_DISCOVER_NETWORKS,
 } from '@server/constants/discover';
 import { ApiErrorCode } from '@server/constants/error';
@@ -124,7 +124,7 @@ describe('sanitizeDiscoverNetworks', () => {
   });
 
   it('gives the client the same trimmed, deduplicated list as the server', () => {
-    const result = discoverNetworksSchema.safeParse([
+    const result = discoverBrandsSchema.safeParse([
       { id: 1, name: ' Netflix ', logoPath: '/logo.png' },
       { id: 1, name: 'Netflix again', logoPath: '/other.png' },
     ]);

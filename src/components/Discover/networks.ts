@@ -1,19 +1,11 @@
 import {
-  DISCOVER_NETWORK_LOGO_PATH,
-  discoverNetworksSchema,
-} from '@server/constants/discover';
+  isDefaultBrandList,
+  parseBrandList,
+  serializeBrandList,
+  type DiscoverBrand,
+} from '@app/components/Discover/brandLists';
 
-export interface DiscoverNetwork {
-  id: number;
-  name: string;
-  logoPath: string;
-}
-
-export const isNetworkLogoPath = (logoPath: string): boolean =>
-  DISCOVER_NETWORK_LOGO_PATH.test(logoPath);
-
-export const networkLogoUrl = (logoPath: string): string =>
-  `https://image.tmdb.org/t/p/w780_filter(duotone,ffffff,bababa)${logoPath}`;
+export type DiscoverNetwork = DiscoverBrand;
 
 export const defaultDiscoverNetworks: DiscoverNetwork[] = [
   { id: 213, name: 'Netflix', logoPath: '/wwemzKWzjKYJFfCeiB57q3r4Bcm.png' },
@@ -58,37 +50,12 @@ export const defaultDiscoverNetworks: DiscoverNetwork[] = [
 
 export const parseDiscoverNetworks = (
   data?: string | null
-): DiscoverNetwork[] => {
-  if (!data) {
-    return defaultDiscoverNetworks;
-  }
-
-  try {
-    // The same schema the server uses, so names are trimmed and duplicate ids
-    // are dropped here too
-    const result = discoverNetworksSchema.safeParse(JSON.parse(data));
-
-    return result.success ? result.data : defaultDiscoverNetworks;
-  } catch {
-    return defaultDiscoverNetworks;
-  }
-};
+): DiscoverNetwork[] => parseBrandList(data, defaultDiscoverNetworks);
 
 export const isDefaultDiscoverNetworks = (
   networks: DiscoverNetwork[]
-): boolean =>
-  networks.length === defaultDiscoverNetworks.length &&
-  networks.every((network, index) => {
-    const fallback = defaultDiscoverNetworks[index];
-
-    return (
-      network.id === fallback.id &&
-      network.name === fallback.name &&
-      network.logoPath === fallback.logoPath
-    );
-  });
+): boolean => isDefaultBrandList(networks, defaultDiscoverNetworks);
 
 export const serializeDiscoverNetworks = (
   networks: DiscoverNetwork[]
-): string | null =>
-  isDefaultDiscoverNetworks(networks) ? null : JSON.stringify(networks);
+): string | null => serializeBrandList(networks, defaultDiscoverNetworks);
