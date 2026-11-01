@@ -1,8 +1,6 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AlterDiscoverSliderDataToText1789300000000
-  implements MigrationInterface
-{
+export class AlterDiscoverSliderDataToText1789300000000 implements MigrationInterface {
   name = 'AlterDiscoverSliderDataToText1789300000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
